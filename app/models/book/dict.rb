@@ -18,15 +18,33 @@ module Book
     def MerriamWebster.lookup(word)
       doc = Nokogiri::HTML(open("http://www.merriam-webster.com/dictionary/#{word}"))
       
+      # Grab the main entry
       entry = doc.css('div.word_definition div.entry')
       
-      word = entry.css('dd.hwrd span.variant')
-      has_variants = word.css('sup') != ''
-      word.css('sup').remove
-      word = word.inner_text
+      # pull that word
+      page_word = entry.css('dd.hwrd span.variant')
       
-      syllables = word.count('·')/2 + 1 #er, yes...it's weird
-      word.gsub!(/·/, '')
+      # are we looking at one of several variants?
+      has_variants = page_word.css('sup') != ''
+      
+      # kill any superscript we find
+      page_word.css('sup').remove
+      page_word = page_word.inner_text
+      
+      syllables = page_word.count('·')/2 + 1 #er, yes...it's weird.  Unicode weirdness, I suspect
+      #word.gsub!(/·/, '')      
+      
+      if(word.index('[').nil?)
+        css_search = "div.page_results ol.results a[@href^=\"/dictionary/#{word}[\"]"
+        variant_count = doc.css(css_search).length
+        puts "variant count: " + variant_count.to_s
+        variants = []
+        2.upto(variant_count) do |i|
+          search = CGI.escape("#{word}[#{i}]")
+          puts "looking up variant #{i} with #{search}"
+          variants << lookup(search)
+        end
+      end
       
       pron = entry.css('dd.pron').inner_text.strip
       
@@ -36,7 +54,7 @@ module Book
       
       date = entry.css('dd.date').inner_text.strip
       
-      puts "entry is #{entry}"
+      #puts "entry is #{entry}"
       
       sense_count = 0
       senses = []
@@ -105,7 +123,7 @@ module Book
           end
           content = nil if !content.nil? and content.length < 3
           
-          puts "sense_count: #{sense_count}, label: #{labels.nil? ? '' : labels.join(':')}, content: #{content}"
+          #puts "sense_count: #{sense_count}, label: #{labels.nil? ? '' : labels.join(':')}, content: #{content}"
           
           if labels.length > 0
             all_labels[labels[0]] ||= {}
@@ -140,7 +158,7 @@ module Book
           end
           
           unless examples.nil?
-            puts " - example is #{examples}"
+            #puts " - example is #{examples}"
           end
           unless synonym.nil?
             #synonym.strip!
@@ -161,17 +179,24 @@ module Book
           :has_variants => has_variants,
           :pron => pron,
           :etymology => etymology,
-          :date => date
+          :date => date,
+          :function => function
         },
-        function => all_labels
+        function => all_labels,
       }
+      variants.each do |v|
+        variant_function = v[:metadata][:function]
+        data[variant_function] = v[variant_function]
+      end
+      #data[:metadata].delete(:function)
       
       #puts "word is #{word}, syllables is #{syllables}, has_variants is #{has_variants}, pron is #{pron}, function is #{function}"
       #puts "etymology is #{etymology}"
       #puts "date is #{date}"
       
-      require 'pp'
-      pp data
+      #require 'pp'
+      #pp data
+      data
     end
     
     private
