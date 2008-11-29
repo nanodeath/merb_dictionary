@@ -86,7 +86,6 @@ module Book
           span.css('.lookup').remove          
           
           content = span.inner_text.lchomp(':') # could be [":", "presence", ",", "sight"]
-          puts "content is #{content}"
           examples = []
           
           loop do
@@ -109,7 +108,6 @@ module Book
           if(content.length > 0 and is_number?(content[0].chr))
             content = ''
           end
-          puts "content is #{content}"
           
           if synonym.length > 0
             content = content.split(':').first
