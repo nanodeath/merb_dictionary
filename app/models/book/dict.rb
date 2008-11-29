@@ -71,33 +71,41 @@ module Book
             end
         elsif(classes.include? 'sense_content')
           #puts " * sense_content"
-        
-          content = span.inner_text.lchomp(':').strip # could be [":", "presence", ",", "sight"]
-          example = content.index('<')
-          unless example.nil?
-            content, example = content[0..example-1].strip, content[example+1..(content.length-2)].strip
-          end
-          puts "content: presplit: #{content}"
-          content_last = content[-1].chr
-          content = content.compress_lines.split(':')
-          content, synonym = content[0], content[1]
-          content = content.strip unless content.nil?
-          synonym = synonym.strip unless synonym.nil?
+          synonym = span.css('.lookup').map { |s| s.inner_text }
+          span.css('.lookup').remove          
           
+          content = span.inner_text.lchomp(':') # could be [":", "presence", ",", "sight"]
+          #example = content.index('<')
+          examples = []
+          
+          #unless example.nil?
+          loop do
+            example = [content.index('<'), content.index('>')]
+            if example[0] == 0
+              examples << content[example[0]+1..example[1]].strip
+              content = content[example[1], content.length-1]
+            elsif example[0].is_a? Integer
+              examples << content[example[0]+1..example[1]-1].strip
+              content = content[0..example[0]-1].strip
+            else
+              break
+            end
+          end
+          #end
+          #content = content.compress_lines.split(':')
+          #content, synonym = content[0], content[1]
+          #content = content.strip unless content.nil?
+          #synonym = synonym.strip unless synonym.nil?
+
+          content = content.compress_lines
+          
+          if synonym.length > 0
+            content = content.split(':').first
+            synonym = [] if content == synonym.first
+          end
+          content = nil if !content.nil? and content.strip.length < 3
           
           puts "sense_count: #{sense_count}, label: #{labels.nil? ? '' : labels.join(':')}, content: #{content}"
-          #all_labels[labels.clone] = content
-          #labels.map! {|l| l.to_s }
-          if content_last == ':'
-            #content_last = nil
-            #labels[0] += ':' + content
-            #labels[0][:type] = content
-            #puts "labels[0] is #{labels[0].inspect}, labels[1] is #{labels[1]}, and content is #{content.inspect}"
-            #labels[1]
-            #labels[1] = :defn
-            #content[:defn] = content
-          end  
-           
           
           if labels.length > 0
             all_labels[labels[0]] ||= {}
@@ -117,9 +125,9 @@ module Book
             end
           end
           #puts "labels: #{labels.join(':')}"
-          content = {:defn => content}
-          content[:example] = example unless example.nil?
-          content[:synonym] = synonym unless synonym.nil?
+          content = content.nil? ? {} : {:defn => content} 
+          content[:examples] = examples unless examples.empty?
+          content[:synonyms] = synonym unless synonym.empty?
           
           if labels.count == 1
             all_labels[labels[0]] = content
@@ -131,12 +139,12 @@ module Book
             all_labels[labels[0]][labels[1]][labels[2]] = content
           end
           
-          unless example.nil?
-            puts " - example is #{example}"
+          unless examples.nil?
+            puts " - example is #{examples}"
           end
           unless synonym.nil?
-            synonym.strip!
-            puts " - synonym is #{synonym}"
+            #synonym.strip!
+            #puts " - synonym is #{synonym.join(',')}"
           end
         elsif(classes.empty?)
           subsense = span.css('.subsense').inner_text.strip
