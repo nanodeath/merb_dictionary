@@ -75,35 +75,35 @@ module Book
           span.css('.lookup').remove          
           
           content = span.inner_text.lchomp(':') # could be [":", "presence", ",", "sight"]
-          #example = content.index('<')
           examples = []
           
-          #unless example.nil?
           loop do
-            example = [content.index('<'), content.index('>')]
-            if example[0] == 0
-              examples << content[example[0]+1..example[1]].strip
-              content = content[example[1], content.length-1]
-            elsif example[0].is_a? Integer
-              examples << content[example[0]+1..example[1]-1].strip
-              content = content[0..example[0]-1].strip
+            example_pos = [content.index('<'), content.index('>')]
+            if example_pos[0] == 0
+              example = content[example_pos[0]+1..example_pos[1]]
+              content = content[example_pos[1], content.length-1]
+            elsif example_pos[0].is_a? Integer
+              example = content[example_pos[0]+1..example_pos[1]-1]
+              content = content[0..example_pos[0]-1]
             else
               break
             end
+            
+            examples << example
           end
-          #end
-          #content = content.compress_lines.split(':')
-          #content, synonym = content[0], content[1]
-          #content = content.strip unless content.nil?
-          #synonym = synonym.strip unless synonym.nil?
 
           content = content.compress_lines
           
+          if(content.length > 0 and is_number?(content[0].chr))
+            content = ''
+          end          
+          
           if synonym.length > 0
             content = content.split(':').first
+            content.strip! unless content.nil?
             synonym = [] if content == synonym.first
           end
-          content = nil if !content.nil? and content.strip.length < 3
+          content = nil if !content.nil? and content.length < 3
           
           puts "sense_count: #{sense_count}, label: #{labels.nil? ? '' : labels.join(':')}, content: #{content}"
           
@@ -147,19 +147,31 @@ module Book
             #puts " - synonym is #{synonym.join(',')}"
           end
         elsif(classes.empty?)
-          subsense = span.css('.subsense').inner_text.strip
+          subsense = span.css('.subsense').inner_text
           subsense = subsense[1..(subsense.length-2)]
           labels[2] = subsense
           #puts "found subsense: #{subsense}"
         end
       end
       
-      puts "word is #{word}, syllables is #{syllables}, has_variants is #{has_variants}, pron is #{pron}, function is #{function}"
-      puts "etymology is #{etymology}"
-      puts "date is #{date}"
+      data = {
+        :word => word,
+        :metadata => {
+          :syllables => syllables,
+          :has_variants => has_variants,
+          :pron => pron,
+          :etymology => etymology,
+          :date => date
+        },
+        function => all_labels
+      }
+      
+      #puts "word is #{word}, syllables is #{syllables}, has_variants is #{has_variants}, pron is #{pron}, function is #{function}"
+      #puts "etymology is #{etymology}"
+      #puts "date is #{date}"
       
       require 'pp'
-      pp all_labels
+      pp data
     end
     
     private
