@@ -1,4 +1,4 @@
-module Dict
+module Book
   class Sense
     include DataMapper::Resource
     

@@ -1,4 +1,4 @@
-module Dict
+module Book
   class InflectedForm
     include DataMapper::Resource
     
