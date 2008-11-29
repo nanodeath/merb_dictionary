@@ -54,9 +54,6 @@ module Book
       
       date = entry.css('dd.date').inner_text.strip
       
-      #puts "entry is #{entry}"
-      
-      sense_count = 0
       senses = []
       labels = []
       all_labels = {}
@@ -66,10 +63,8 @@ module Book
         next if !span.parent.attributes['class'].nil? and span.parent.attributes['class'].strip.split.include? 'variant'
         classes = span.attributes['class'].nil? ? [] : span.attributes['class'].strip.split;
         if(classes.include? 'sense_break')
-          sense_count += 1
-          #puts " * sense_break #{span}"
+          # do nothing
         elsif(classes.include? 'sense_label')
-          #puts " * sense_label: #{span}"
           label = span.inner_text.split # could be ["1"], or ["1", "a"]
             if label.count > 1
               
@@ -80,7 +75,6 @@ module Book
               labels[1] = label.first
               labels.delete_at(2)
             elsif is_number?(label.first)
-              #puts "resetting labels2"
               labels = []
               labels[0] = label.first
               labels[0] = {:num => labels[0]}
@@ -88,11 +82,11 @@ module Book
               labels[2] = label.first[1].chr
             end
         elsif(classes.include? 'sense_content')
-          #puts " * sense_content"
           synonym = span.css('.lookup').map { |s| s.inner_text }
           span.css('.lookup').remove          
           
           content = span.inner_text.lchomp(':') # could be [":", "presence", ",", "sight"]
+          puts "content is #{content}"
           examples = []
           
           loop do
@@ -114,7 +108,8 @@ module Book
           
           if(content.length > 0 and is_number?(content[0].chr))
             content = ''
-          end          
+          end
+          puts "content is #{content}"
           
           if synonym.length > 0
             content = content.split(':').first
@@ -123,8 +118,9 @@ module Book
           end
           content = nil if !content.nil? and content.length < 3
           
-          #puts "sense_count: #{sense_count}, label: #{labels.nil? ? '' : labels.join(':')}, content: #{content}"
-          
+          if labels.length == 0
+            labels = [{:num => '1'}]
+          end
           if labels.length > 0
             all_labels[labels[0]] ||= {}
           end
@@ -135,14 +131,11 @@ module Book
             begin
               all_labels[labels[0]][labels[1]][labels[2]] = ''
             rescue
-              #puts "labels 0, 1: #{labels[0]}; #{labels[1]}"
-              #puts "currently: " + all_labels[labels[0].to_s]
               all_labels[labels[0]] = {}
               all_labels[labels[0]][labels[1]] = {}
               retry
             end
           end
-          #puts "labels: #{labels.join(':')}"
           content = content.nil? ? {} : {:defn => content} 
           content[:examples] = examples unless examples.empty?
           content[:synonyms] = synonym unless synonym.empty?
@@ -188,14 +181,8 @@ module Book
         variant_function = v[:metadata][:function]
         data[variant_function] = v[variant_function]
       end
-      #data[:metadata].delete(:function)
+      data[:metadata].delete(:function) if variants.length > 0
       
-      #puts "word is #{word}, syllables is #{syllables}, has_variants is #{has_variants}, pron is #{pron}, function is #{function}"
-      #puts "etymology is #{etymology}"
-      #puts "date is #{date}"
-      
-      #require 'pp'
-      #pp data
       data
     end
     
